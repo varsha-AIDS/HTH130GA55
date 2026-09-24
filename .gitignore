@@ -1,1 +1,16 @@
 .env
+
+venv/
+__pycache__/
+*.pyc
+
+uploads/
+*.mp4
+*.mp3
+*.wav
+*.m4a
+
+transcripts/
+*.txt
+
+.streamlit/secrets.toml
