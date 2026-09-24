@@ -1,9 +1,13 @@
+<<<<<<< HEAD
 .env
 
+=======
+>>>>>>> 16606e7 (Initial commit - AI Meeting Accountability System)
 venv/
 __pycache__/
 *.pyc
 
+<<<<<<< HEAD
 uploads/
 *.mp4
 *.mp3
@@ -14,3 +18,18 @@ transcripts/
 *.txt
 
 .streamlit/secrets.toml
+=======
+.env
+
+uploads/
+transcripts/
+
+final_transcript.txt
+action_items.txt
+
+*.mp3
+*.mp4
+*.wav
+
+test_recording.*
+>>>>>>> 16606e7 (Initial commit - AI Meeting Accountability System)
