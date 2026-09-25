@@ -2,492 +2,276 @@ import streamlit as st
 import pandas as pd
 import os
 
+from transcriber import transcribe_audio
+from diarization import diarize_audio
 
-# =========================================================
-# PAGE SETTINGS
-# =========================================================
+
+# =====================================
+# PAGE CONFIGURATION
+# =====================================
 
 st.set_page_config(
     page_title="MeetTrack AI",
-    page_icon="🎯",
+    page_icon="🎙️",
     layout="wide"
 )
 
 
-# =========================================================
-# SESSION STATE
-# =========================================================
-
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if "page" not in st.session_state:
-    st.session_state.page = "Dashboard"
-
-if "show_signup" not in st.session_state:
-    st.session_state.show_signup = False
-
-if "files_uploaded" not in st.session_state:
-    st.session_state.files_uploaded = False
-
-
-# =========================================================
-# CSS DESIGN
-# =========================================================
+# =====================================
+# CUSTOM CSS
+# =====================================
 
 st.markdown("""
 <style>
 
-.stApp {
-    background: linear-gradient(
-        135deg,
-        #eaf4ff,
-        #f8fbff,
-        #dceeff
-    );
-}
-
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 3rem;
-}
-
-h1 {
-    color: #0b3d91 !important;
-}
-
-h2 {
-    color: #0b3d91 !important;
-}
-
-h3 {
-    color: #1769d2 !important;
+.main {
+    background-color: #f7f9fc;
 }
 
 .stButton > button {
-    width: 100%;
-    min-height: 45px;
-
-    background: linear-gradient(
-        135deg,
-        #1769d2,
-        #0b3d91
-    );
-
-    color: white !important;
-
-    border: none;
-    border-radius: 10px;
-
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 15px;
 }
 
-.stButton > button:hover {
-    background: linear-gradient(
-        135deg,
-        #0b3d91,
-        #1769d2
-    );
-
-    color: white !important;
-}
-
-.stTextInput input {
-    min-height: 42px;
-    border-radius: 9px;
-    border: 1px solid #b8d4f5;
-    background-color: white;
-}
-
-[data-testid="stFileUploader"] {
-    background-color: white;
-    padding: 15px;
-    border-radius: 12px;
-    border: 1px solid #d5e5f7;
-}
-
-section[data-testid="stSidebar"] {
-    background: linear-gradient(
-        180deg,
-        #0b3d91,
-        #1769d2
-    );
-}
-
-section[data-testid="stSidebar"] * {
-    color: white !important;
-}
-
-.metric-box {
+.card {
     background-color: white;
     padding: 20px;
-    border-radius: 15px;
-    text-align: center;
-    border-top: 5px solid #1769d2;
-    box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    box-shadow: 0px 2px 10px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
 }
 
-.info-box {
-    background-color: white;
-    padding: 22px;
-    border-radius: 15px;
-    box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
-    border-left: 5px solid #1769d2;
+.title {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.subtitle {
+    font-size: 18px;
+    color: #666;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 
-# =========================================================
+# =====================================
+# SESSION STATE
+# =====================================
+
+if "page" not in st.session_state:
+    st.session_state.page = "Dashboard"
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+if "meetings" not in st.session_state:
+    st.session_state.meetings = []
+
+
+# =====================================
 # SIGN IN PAGE
-# =========================================================
+# =====================================
 
-def signin_page():
+def sign_in():
 
-    st.write("")
+    st.title("🎙️ MeetTrack AI")
 
-    left, center, right = st.columns([1, 1.4, 1])
+    st.subheader("Sign In")
 
-    with center:
+    username = st.text_input("Username")
 
-        st.info(
-            "🎯  MeetTrack AI\n\n"
-            "AI Meeting-to-Accountability System\n\n"
-            "✨ Capture  •  📋 Track  •  🎯 Achieve"
-        )
+    password = st.text_input(
+        "Password",
+        type="password"
+    )
 
-        st.write("")
+    if st.button("Sign In"):
 
-        st.markdown("## 👋 Welcome Back!")
+        if username and password:
 
-        st.write(
-            "Sign in to continue to your dashboard."
-        )
-
-        st.write("")
-
-        username = st.text_input(
-            "Username",
-            placeholder="Enter your username"
-        )
-
-        password = st.text_input(
-            "Password",
-            type="password",
-            placeholder="Enter your password"
-        )
-
-        st.write("")
-
-        if st.button(
-            "🔐 Sign In",
-            use_container_width=True
-        ):
-
-            if username and password:
-
-                st.session_state.logged_in = True
-                st.session_state.page = "Dashboard"
-
-                st.rerun()
-
-            else:
-
-                st.error(
-                    "Please enter username and password."
-                )
-
-        st.write("")
-
-        st.divider()
-
-        st.write(
-            "Don't have an account?"
-        )
-
-        if st.button(
-            "✨ Create New Account",
-            use_container_width=True
-        ):
-
-            st.session_state.show_signup = True
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.session_state.page = "Dashboard"
 
             st.rerun()
 
-        st.caption(
-            "🔒 Your meeting information is organized "
-            "and tracked securely."
-        )
+        else:
+
+            st.error(
+                "Please enter username and password."
+            )
+
+    st.divider()
+
+    if st.button("Create New Account"):
+
+        st.session_state.page = "Sign Up"
+
+        st.rerun()
 
 
-# =========================================================
+# =====================================
 # SIGN UP PAGE
-# =========================================================
+# =====================================
 
-def signup_page():
+def sign_up():
 
-    st.write("")
+    st.title("🎙️ MeetTrack AI")
 
-    left, center, right = st.columns([1, 1.4, 1])
+    st.subheader("Create Account")
 
-    with center:
+    username = st.text_input("Username")
 
-        st.info(
-            "🎯  MeetTrack AI\n\n"
-            "Create your account"
-        )
+    email = st.text_input("Email")
 
-        st.write("")
+    password = st.text_input(
+        "Password",
+        type="password"
+    )
 
-        st.markdown("## ✨ Create Account")
+    confirm_password = st.text_input(
+        "Confirm Password",
+        type="password"
+    )
 
-        st.write(
-            "Enter your details below."
-        )
+    if st.button("Create Account"):
 
-        st.write("")
+        if not username or not email or not password:
 
-        name = st.text_input(
-            "Full Name",
-            placeholder="Enter your full name"
-        )
+            st.error(
+                "Please fill all fields."
+            )
 
-        email = st.text_input(
-            "Email",
-            placeholder="Enter your email"
-        )
+        elif password != confirm_password:
 
-        username = st.text_input(
-            "Username",
-            placeholder="Create a username"
-        )
+            st.error(
+                "Passwords do not match."
+            )
 
-        password = st.text_input(
-            "Password",
-            type="password",
-            placeholder="Create a password"
-        )
+        else:
 
-        confirm_password = st.text_input(
-            "Confirm Password",
-            type="password",
-            placeholder="Enter password again"
-        )
+            st.success(
+                "Account created successfully!"
+            )
 
-        st.write("")
-
-        if st.button(
-            "✨ Create Account",
-            use_container_width=True
-        ):
-
-            if not name:
-
-                st.error(
-                    "Please enter your name."
-                )
-
-            elif not email:
-
-                st.error(
-                    "Please enter your email."
-                )
-
-            elif not username:
-
-                st.error(
-                    "Please create a username."
-                )
-
-            elif not password:
-
-                st.error(
-                    "Please create a password."
-                )
-
-            elif password != confirm_password:
-
-                st.error(
-                    "Passwords do not match."
-                )
-
-            else:
-
-                st.success(
-                    "Account created successfully!"
-                )
-
-                st.info(
-                    "Please go back to Sign In."
-                )
-
-        st.write("")
-
-        if st.button(
-            "← Back to Sign In",
-            use_container_width=True
-        ):
-
-            st.session_state.show_signup = False
+            st.session_state.page = "Sign In"
 
             st.rerun()
 
+    if st.button("Back to Sign In"):
 
-# =========================================================
+        st.session_state.page = "Sign In"
+
+        st.rerun()
+
+
+# =====================================
 # SIDEBAR
-# =========================================================
+# =====================================
 
 def sidebar():
 
-    st.sidebar.title(
-        "🎯 MeetTrack AI"
-    )
+    st.sidebar.title("🎙️ MeetTrack AI")
 
     st.sidebar.write(
-        "Meeting Accountability System"
+        f"Welcome, {st.session_state.username}"
     )
 
     st.sidebar.divider()
 
-    if st.sidebar.button(
-        "🏠 Dashboard",
-        use_container_width=True
-    ):
+    if st.sidebar.button("🏠 Dashboard"):
 
         st.session_state.page = "Dashboard"
 
         st.rerun()
 
-    if st.sidebar.button(
-        "🎙️ New Meeting",
-        use_container_width=True
-    ):
+    if st.sidebar.button("➕ New Meeting"):
 
         st.session_state.page = "New Meeting"
 
         st.rerun()
 
-    if st.sidebar.button(
-        "📝 Transcript",
-        use_container_width=True
-    ):
+    if st.sidebar.button("📄 Transcript"):
 
         st.session_state.page = "Transcript"
 
         st.rerun()
 
-    if st.sidebar.button(
-        "🤖 Analysis",
-        use_container_width=True
-    ):
+    if st.sidebar.button("📊 Analysis"):
 
         st.session_state.page = "Analysis"
 
         st.rerun()
 
-    if st.sidebar.button(
-        "📋 Action Items",
-        use_container_width=True
-    ):
+    if st.sidebar.button("✅ Action Items"):
 
         st.session_state.page = "Action Items"
 
         st.rerun()
 
-    if st.sidebar.button(
-        "📜 Meeting History",
-        use_container_width=True
-    ):
+    if st.sidebar.button("🕒 Meeting History"):
 
-        st.session_state.page = "History"
+        st.session_state.page = "Meeting History"
 
         st.rerun()
 
     st.sidebar.divider()
 
-    if st.sidebar.button(
-        "🚪 Logout",
-        use_container_width=True
-    ):
+    if st.sidebar.button("Logout"):
 
         st.session_state.logged_in = False
-
-        st.session_state.page = "Dashboard"
+        st.session_state.page = "Sign In"
 
         st.rerun()
 
 
-# =========================================================
+# =====================================
 # DASHBOARD
-# =========================================================
+# =====================================
 
 def dashboard():
 
-    st.title(
-        "🎯 MeetTrack AI"
-    )
-
-    st.subheader(
-        "Welcome to your Meeting Accountability Dashboard"
-    )
+    st.title("🏠 Dashboard")
 
     st.write(
-        "Track meetings, tasks, owners and deadlines in one place."
+        "AI-powered meeting accountability system"
     )
-
-    st.write("")
 
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
 
         st.metric(
-            "📅 Total Meetings",
-            "5"
+            "Total Meetings",
+            5
         )
 
     with col2:
 
         st.metric(
-            "📋 Action Items",
-            "12"
+            "Action Items",
+            12
         )
 
     with col3:
 
         st.metric(
-            "✅ Completed",
-            "7"
+            "Completed",
+            7
         )
 
     with col4:
 
         st.metric(
-            "⚠️ Overdue",
-            "3"
+            "Overdue",
+            3
         )
 
-    st.write("")
-
-    st.info(
-        "🎙️ Start a New Meeting\n\n"
-        "Upload your meeting recordings and "
-        "let MeetTrack AI identify tasks, "
-        "owners and deadlines."
-    )
-
-    if st.button(
-        "🎙️ Start New Meeting",
-        use_container_width=True
-    ):
-
-        st.session_state.page = "New Meeting"
-
-        st.rerun()
-
-    st.write("")
+    st.divider()
 
     st.subheader(
         "📌 Recent Action Items"
@@ -497,8 +281,8 @@ def dashboard():
 
         "Task": [
             "Complete database",
-            "Complete dashboard",
-            "Test the system"
+            "Finish dashboard",
+            "Test system"
         ],
 
         "Owner": [
@@ -510,653 +294,250 @@ def dashboard():
         "Deadline": [
             "Today",
             "Tomorrow evening",
-            "Not decided"
-        ],
-
-        "Status": [
-            "New",
-            "New",
-            "Unresolved"
-        ]
-    }
-
-    df = pd.DataFrame(data)
-
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True
-    )
-
-
-# =========================================================
-# NEW MEETING PAGE
-# =========================================================
-
-def new_meeting():
-
-    st.title(
-        "🎙️ New Meeting"
-    )
-
-    st.subheader(
-        "Upload your 26 conversation recordings"
-    )
-
-    st.info(
-        "Use this filename format:\n\n"
-        "01_HR.mp4\n"
-        "02_POOJA.mp4\n"
-        "03_PRATHIKSHA.mp4\n"
-        "04_POOJA.mp4\n"
-        "05_HR.mp4\n"
-        "... and so on"
-    )
-
-    uploaded_files = st.file_uploader(
-        "Upload Meeting Audio Files",
-        type=[
-            "mp4",
-            "mp3",
-            "wav",
-            "m4a"
-        ],
-        accept_multiple_files=True
-    )
-
-    if uploaded_files:
-
-        uploaded_files = sorted(
-            uploaded_files,
-            key=lambda file: file.name
-        )
-
-        st.session_state.files_uploaded = True
-
-        st.success(
-            f"{len(uploaded_files)} audio files uploaded."
-        )
-
-        st.subheader(
-            "🎧 Conversation Order"
-        )
-
-        for file in uploaded_files:
-
-            filename = file.name.upper()
-
-            if "_HR" in filename:
-
-                speaker = "HR"
-
-            elif "_POOJA" in filename:
-
-                speaker = "Pooja"
-
-            elif "_PRATHIKSHA" in filename:
-
-                speaker = "Prathiksha"
-
-            else:
-
-                speaker = "Unknown"
-
-            st.write(
-                f"🎙️ **{speaker}** — {file.name}"
-            )
-
-        st.write("")
-
-        # =================================================
-        # STEP 1
-        # =================================================
-
-        st.subheader(
-            "🎙️ Step 1: Generate Transcript"
-        )
-
-        if st.button(
-            "🎙️ Generate Transcript",
-            use_container_width=True
-        ):
-
-            st.info(
-                "⏳ Transcript generation will be connected "
-                "to Member 3's transcription module."
-            )
-
-            st.write(
-                "The uploaded recordings are ready. "
-                "Member 3's transcription code will be "
-                "connected to this button."
-            )
-
-        st.write("")
-
-        # =================================================
-        # STEP 2
-        # =================================================
-
-        st.subheader(
-            "📝 Step 2: View Transcript"
-        )
-
-        if st.button(
-            "📝 View Transcript",
-            use_container_width=True
-        ):
-
-            st.session_state.page = "Transcript"
-
-            st.rerun()
-
-        st.write("")
-
-        # =================================================
-        # STEP 3
-        # =================================================
-
-        st.subheader(
-            "🤖 Step 3: Analyse Meeting"
-        )
-
-        if st.button(
-            "🤖 Analyse Meeting",
-            use_container_width=True
-        ):
-
-            st.session_state.page = "Analysis"
-
-            st.rerun()
-
-
-# =========================================================
-# TRANSCRIPT PAGE
-# =========================================================
-
-def transcript_page():
-
-    st.title(
-        "📝 Meeting Transcript"
-    )
-
-    st.write(
-        "View and manage the transcript generated "
-        "from your meeting recordings."
-    )
-
-    st.write("")
-
-    # =====================================================
-    # BUTTONS
-    # =====================================================
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        if st.button(
-            "🎙️ Generate Transcript",
-            use_container_width=True
-        ):
-
-            st.info(
-                "⏳ Transcript generation will be connected "
-                "to Member 3's transcription module."
-            )
-
-            st.write(
-                "Once Member 3 completes the transcription "
-                "module, it will generate the transcript here."
-            )
-
-    with col2:
-
-        if st.button(
-            "📝 View Transcript",
-            use_container_width=True
-        ):
-
-            st.success(
-                "You are already on the Transcript page."
-            )
-
-    st.write("")
-
-    st.divider()
-
-    # =====================================================
-    # TRANSCRIPT FOLDER
-    # =====================================================
-
-    transcript_folder = "transcripts"
-
-    # =====================================================
-    # CHECK FOLDER
-    # =====================================================
-
-    if not os.path.exists(
-        transcript_folder
-    ):
-
-        st.warning(
-            "⚠️ No transcripts found yet."
-        )
-
-        st.info(
-            "Member 3's transcription module will "
-            "generate the transcript files here."
-        )
-
-        st.write("")
-
-        st.subheader(
-            "📂 Expected Folder"
-        )
-
-        st.code(
-            "transcripts/",
-            language="text"
-        )
-
-        st.write("")
-
-        st.subheader(
-            "🔄 Current Status"
-        )
-
-        st.write(
-            "🎙️ Meeting recordings → Waiting"
-        )
-
-        st.write(
-            "📝 Transcript → Waiting for Member 3"
-        )
-
-        st.write(
-            "🤖 AI Analysis → Ready after transcript"
-        )
-
-        return
-
-    # =====================================================
-    # FIND TXT FILES
-    # =====================================================
-
-    transcript_files = [
-
-        file
-
-        for file in os.listdir(
-            transcript_folder
-        )
-
-        if file.lower().endswith(".txt")
-    ]
-
-    transcript_files.sort()
-
-    # =====================================================
-    # IF EMPTY
-    # =====================================================
-
-    if len(transcript_files) == 0:
-
-        st.warning(
-            "⚠️ The transcripts folder is currently empty."
-        )
-
-        st.info(
-            "Waiting for Member 3's transcription output."
-        )
-
-        st.write("")
-
-        st.subheader(
-            "🔄 Processing Status"
-        )
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-
-            st.metric(
-                "🎙️ Recordings",
-                "26"
-            )
-
-        with col2:
-
-            st.metric(
-                "📝 Transcripts",
-                "0"
-            )
-
-        with col3:
-
-            st.metric(
-                "🤖 Analysis",
-                "Waiting"
-            )
-
-        return
-
-    # =====================================================
-    # TRANSCRIPTS FOUND
-    # =====================================================
-
-    st.success(
-        f"✅ {len(transcript_files)} transcript files found."
-    )
-
-    st.write("")
-
-    selected_file = st.selectbox(
-        "Select a transcript to view",
-        transcript_files
-    )
-
-    st.write("")
-
-    selected_path = os.path.join(
-        transcript_folder,
-        selected_file
-    )
-
-    # =====================================================
-    # READ TRANSCRIPT
-    # =====================================================
-
-    try:
-
-        with open(
-            selected_path,
-            "r",
-            encoding="utf-8"
-        ) as file:
-
-            transcript_text = file.read()
-
-        st.subheader(
-            f"🎙️ {selected_file}"
-        )
-
-        if transcript_text.strip():
-
-            st.text_area(
-                "Transcript",
-                transcript_text,
-                height=400
-            )
-
-        else:
-
-            st.warning(
-                "This transcript is empty."
-            )
-
-    except Exception as error:
-
-        st.error(
-            f"Unable to read transcript: {error}"
-        )
-
-    st.write("")
-
-    # =====================================================
-    # ALL TRANSCRIPTS
-    # =====================================================
-
-    st.subheader(
-        "📚 All Transcripts"
-    )
-
-    for file in transcript_files:
-
-        file_path = os.path.join(
-            transcript_folder,
-            file
-        )
-
-        with open(
-            file_path,
-            "r",
-            encoding="utf-8"
-        ) as f:
-
-            text = f.read()
-
-        with st.expander(
-            f"🎙️ {file}"
-        ):
-
-            if text.strip():
-
-                st.write(text)
-
-            else:
-
-                st.write(
-                    "No transcript available."
-                )
-
-    st.write("")
-
-    # =====================================================
-    # CONTINUE TO ANALYSIS
-    # =====================================================
-
-    if st.button(
-        "🤖 Continue to Analysis",
-        use_container_width=True
-    ):
-
-        st.session_state.page = "Analysis"
-
-        st.rerun()
-
-
-# =========================================================
-# ANALYSIS PAGE
-# =========================================================
-
-def analysis():
-
-    st.title(
-        "🤖 Meeting Analysis"
-    )
-
-    st.subheader(
-        "AI analysis of the complete meeting"
-    )
-
-    st.write("")
-
-    st.info(
-        "This section will be connected to the "
-        "GenAI extraction module after the transcript "
-        "is available."
-    )
-
-    st.write("")
-
-    st.success(
-        "✅ Transcript processing ready"
-    )
-
-    st.success(
-        "✅ Action item extraction ready"
-    )
-
-    st.success(
-        "✅ Owner detection ready"
-    )
-
-    st.success(
-        "✅ Deadline detection ready"
-    )
-
-    st.warning(
-        "⚠️ Unresolved issues will be identified "
-        "by the AI module."
-    )
-
-    st.write("")
-
-    st.subheader(
-        "📋 Extracted Action Items"
-    )
-
-    data = {
-
-        "Action Item": [
-            "Complete database",
-            "Complete dashboard",
-            "Test the system"
-        ],
-
-        "Owner": [
-            "Pooja",
-            "Prathiksha",
-            "Not decided"
-        ],
-
-        "Deadline": [
-            "Today",
-            "Tomorrow evening",
-            "Not decided"
-        ],
-
-        "Status": [
-            "New",
-            "New",
-            "Unresolved"
-        ]
-    }
-
-    df = pd.DataFrame(data)
-
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.subheader(
-        "🔎 Evidence from Conversation"
-    )
-
-    st.info(
-        'Pooja: "I can finish it today."'
-    )
-
-    st.info(
-        'Prathiksha: '
-        '"I can finish it by tomorrow evening."'
-    )
-
-    st.warning(
-        "Testing owner has not been decided."
-    )
-
-    st.write("")
-
-    if st.button(
-        "📋 View Action Items",
-        use_container_width=True
-    ):
-
-        st.session_state.page = "Action Items"
-
-        st.rerun()
-
-
-# =========================================================
-# ACTION ITEMS PAGE
-# =========================================================
-
-def action_items():
-
-    st.title(
-        "📋 Action Item Tracker"
-    )
-
-    st.write(
-        "Track all tasks from your meetings."
-    )
-
-    data = {
-
-        "Task": [
-            "Complete database",
-            "Complete dashboard",
-            "Test the system",
-            "Review meeting tasks"
-        ],
-
-        "Owner": [
-            "Pooja",
-            "Prathiksha",
-            "Not decided",
-            "HR"
-        ],
-
-        "Deadline": [
-            "Today",
-            "Tomorrow evening",
-            "Not decided",
             "Next meeting"
         ],
 
         "Status": [
             "New",
             "New",
-            "Unresolved",
-            "Carried Over"
+            "Carried-over"
         ]
+
     }
 
     df = pd.DataFrame(data)
 
-    selected_status = st.selectbox(
-        "Filter by Status",
-        [
-            "All",
-            "New",
-            "In Progress",
-            "Completed",
-            "Carried Over",
-            "Overdue",
-            "Unresolved"
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
+
+
+# =====================================
+# NEW MEETING
+# =====================================
+
+def new_meeting():
+
+    st.title("➕ New Meeting")
+
+    st.write(
+        "Upload your meeting recording."
+    )
+
+    file = st.file_uploader(
+        "Upload Meeting Recording",
+        type=[
+            "mp4",
+            "mp3",
+            "wav",
+            "m4a"
         ]
     )
 
-    if selected_status != "All":
+    if file:
 
-        df = df[
-            df["Status"] == selected_status
+        st.success(
+            f"File uploaded: {file.name}"
+        )
+
+        if st.button(
+            "🎙️ Generate Transcript"
+        ):
+
+            with st.spinner(
+                "Transcribing audio..."
+            ):
+
+                transcript = transcribe_audio(file)
+
+            st.subheader(
+                "📝 Transcript"
+            )
+
+            st.text_area(
+                "Transcript",
+                transcript,
+                height=300
+            )
+
+            # =====================================
+            # SPEAKER DIARIZATION
+            # =====================================
+
+            file.seek(0)
+
+            speaker_segments = diarize_audio(file)
+
+            st.subheader(
+                "🎙️ Speaker Diarization"
+            )
+
+            for segment in speaker_segments:
+
+                st.write(
+                    f"{segment['speaker']} : "
+                    f"{segment['start']:.2f}s - "
+                    f"{segment['end']:.2f}s"
+                )
+
+
+# =====================================
+# TRANSCRIPT PAGE
+# =====================================
+
+def transcript_page():
+
+    st.title("📄 Meeting Transcript")
+
+    transcript_folder = "transcripts"
+
+    if os.path.exists(transcript_folder):
+
+        files = [
+            file
+            for file in os.listdir(transcript_folder)
+            if file.endswith(".txt")
         ]
+
+        if files:
+
+            selected_file = st.selectbox(
+                "Select Transcript",
+                files
+            )
+
+            file_path = os.path.join(
+                transcript_folder,
+                selected_file
+            )
+
+            with open(
+                file_path,
+                "r",
+                encoding="utf-8"
+            ) as f:
+
+                transcript = f.read()
+
+            st.text_area(
+                "Transcript",
+                transcript,
+                height=500
+            )
+
+        else:
+
+            st.info(
+                "No transcripts available."
+            )
+
+    else:
+
+        st.info(
+            "Transcript folder not found."
+        )
+
+
+# =====================================
+# ANALYSIS PAGE
+# =====================================
+
+def analysis():
+
+    st.title("📊 Meeting Analysis")
+
+    st.subheader(
+        "Extracted Information"
+    )
+
+    data = {
+
+        "Task": [
+            "Work on database",
+            "Work on dashboard",
+            "Track unfinished tasks"
+        ],
+
+        "Owner": [
+            "Pooja",
+            "Prathiksha",
+            "Not decided"
+        ],
+
+        "Deadline": [
+            "Today",
+            "Tomorrow evening",
+            "Next meeting"
+        ],
+
+        "Evidence": [
+            "I will work on the database.",
+            "I will work on the dashboard.",
+            "We should also track unfinished tasks."
+        ]
+
+    }
+
+    df = pd.DataFrame(data)
 
     st.dataframe(
         df,
-        use_container_width=True,
-        hide_index=True
+        use_container_width=True
     )
 
 
-# =========================================================
+# =====================================
+# ACTION ITEMS PAGE
+# =====================================
+
+def action_items():
+
+    st.title("✅ Action Items")
+
+    data = {
+
+        "Task": [
+            "Complete database",
+            "Finish dashboard",
+            "Track unfinished tasks"
+        ],
+
+        "Owner": [
+            "Pooja",
+            "Prathiksha",
+            "Not decided"
+        ],
+
+        "Deadline": [
+            "Today",
+            "Tomorrow evening",
+            "Next meeting"
+        ],
+
+        "Status": [
+            "New",
+            "New",
+            "Carried-over"
+        ]
+
+    }
+
+    df = pd.DataFrame(data)
+
+    st.dataframe(
+        df,
+        use_container_width=True
+    )
+
+
+# =====================================
 # MEETING HISTORY
-# =========================================================
+# =====================================
 
-def history():
+def meeting_history():
 
-    st.title(
-        "📜 Meeting History"
-    )
-
-    st.write(
-        "Previous meetings and their action items."
-    )
+    st.title("🕒 Meeting History")
 
     data = {
 
@@ -1173,40 +554,34 @@ def history():
         ],
 
         "Action Items": [
-            3,
             5,
-            4
-        ],
-
-        "Status": [
-            "In Progress",
-            "Completed",
-            "In Progress"
+            4,
+            3
         ]
+
     }
 
     df = pd.DataFrame(data)
 
     st.dataframe(
         df,
-        use_container_width=True,
-        hide_index=True
+        use_container_width=True
     )
 
 
-# =========================================================
-# MAIN PROGRAM
-# =========================================================
+# =====================================
+# MAIN APPLICATION
+# =====================================
 
 if not st.session_state.logged_in:
 
-    if st.session_state.show_signup:
+    if st.session_state.page == "Sign Up":
 
-        signup_page()
+        sign_up()
 
     else:
 
-        signin_page()
+        sign_in()
 
 else:
 
@@ -1232,6 +607,7 @@ else:
 
         action_items()
 
-    elif st.session_state.page == "History":
+    elif st.session_state.page == "Meeting History":
 
-        history()
+        meeting_history()
+        

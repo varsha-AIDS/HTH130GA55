@@ -1,3 +1,5 @@
+import torch
+import soundfile as sf
 from pyannote.audio import Pipeline
 
 print("Loading speaker diarization model...")
@@ -8,23 +10,40 @@ pipeline = Pipeline.from_pretrained(
 
 print("Model loaded successfully!")
 
-audio_file = "uploads/01_HR.mp4"
 
-print("Processing:", audio_file)
+def diarize_audio(audio_file):
 
-output = pipeline(audio_file)
+    print("Processing:", audio_file)
 
-print()
-print("SPEAKER SEGMENTS")
-print("=" * 50)
+    # Load audio using SoundFile instead of TorchCodec
+    waveform, sample_rate = sf.read(audio_file, dtype="float32")
 
-# Get the actual diarization annotation
-diarization = output.speaker_diarization
+    # Convert NumPy array → PyTorch tensor
+    waveform = torch.from_numpy(waveform)
 
-for turn, _, speaker in diarization.itertracks(yield_label=True):
-    print(
-        f"{turn.start:.2f}s --> {turn.end:.2f}s : {speaker}"
-    )
+    # If stereo, convert to [channel, time]
+    if waveform.ndim == 1:
+        waveform = waveform.unsqueeze(0)
+    else:
+        waveform = waveform.T
 
-print()
-print("DIARIZATION COMPLETED")
+    audio = {
+        "waveform": waveform,
+        "sample_rate": sample_rate
+    }
+
+    output = pipeline(audio)
+
+    diarization = output.speaker_diarization
+
+    speaker_segments = []
+
+    for turn, _, speaker in diarization.itertracks(yield_label=True):
+
+        speaker_segments.append({
+            "start": turn.start,
+            "end": turn.end,
+            "speaker": speaker
+        })
+
+    return speaker_segments
