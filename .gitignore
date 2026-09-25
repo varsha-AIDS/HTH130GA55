@@ -1,35 +1,30 @@
-<<<<<<< HEAD
+# Environment
 .env
 
-=======
->>>>>>> 16606e7 (Initial commit - AI Meeting Accountability System)
+# Virtual environment
 venv/
+
+# Python cache
 __pycache__/
 *.pyc
 
-<<<<<<< HEAD
+# Uploaded media
 uploads/
 *.mp4
 *.mp3
 *.wav
 *.m4a
 
+# Transcripts
 transcripts/
 *.txt
 
+# Streamlit secrets
 .streamlit/secrets.toml
-=======
-.env
 
-uploads/
-transcripts/
-
+# Generated files
 final_transcript.txt
 action_items.txt
 
-*.mp3
-*.mp4
-*.wav
-
+# Test recordings
 test_recording.*
->>>>>>> 16606e7 (Initial commit - AI Meeting Accountability System)
